@@ -2,8 +2,6 @@ mod = angular.module('infinite-scroll', [])
 
 mod.directive 'infiniteScroll', ['$rootScope', '$window', '$timeout', ($rootScope, $window, $timeout) ->
   link: (scope, elem, attrs) ->
-    $window = angular.element($window)
-
     # infinite-scroll-distance specifies how close to the bottom of the page
     # the window is allowed to be before we trigger a new scroll. The value
     # provided is multiplied by the window height; for example, to load
@@ -29,16 +27,28 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$timeout', ($rootScop
           checkWhenEnabled = false
           handler()
 
+    # throttle function so scroll event don't hit
+    # handler every time it's emmitted
+    throttle = (fn, delay) ->
+      return fn if delay is 0
+      timer = false
+      return ->
+        return if timer
+        timer = true
+        $timeout (-> timer = false), delay unless delay is -1
+        fn arguments...
+
     # infinite-scroll specifies a function to call when the window
     # is scrolled within a certain range from the bottom of the
     # document. It is recommended to use infinite-scroll-disabled
     # with a boolean that is set to true when the function is
     # called in order to throttle the function call.
     handler = ->
-      windowBottom = $window.height() + $window.scrollTop()
-      elementBottom = elem.offset().top + elem.height()
+      element = elem[0]
+      windowBottom = $window.document.documentElement.clientHeight + ($window.scrollY || $window.document.documentElement.scrollTop || $window.document.body.scrollTop)
+      elementBottom = element.offsetTop + element.clientHeight
       remaining = elementBottom - windowBottom
-      shouldScroll = remaining <= $window.height() * scrollDistance
+      shouldScroll = remaining <= $window.innerHeight * scrollDistance
 
       if shouldScroll && scrollEnabled
         if $rootScope.$$phase
@@ -48,9 +58,9 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$timeout', ($rootScop
       else if shouldScroll
         checkWhenEnabled = true
 
-    $window.on 'scroll', handler
+    $window.onscroll = throttle handler, 100
     scope.$on '$destroy', ->
-      $window.off 'scroll', handler
+      $window.onscroll = null
 
     $timeout (->
       if attrs.infiniteScrollImmediateCheck
