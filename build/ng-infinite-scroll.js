@@ -1,4 +1,4 @@
-/* ng-infinite-scroll - v1.0.0 - 2013-07-03 */
+/* ng-infinite-scroll - v1.0.1 - 2013-10-09 */
 var mod;
 
 mod = angular.module('infinite-scroll', []);
@@ -7,7 +7,8 @@ mod.directive('infiniteScroll', [
   '$rootScope', '$window', '$timeout', function($rootScope, $window, $timeout) {
     return {
       link: function(scope, elem, attrs) {
-        var checkWhenEnabled, handler, scrollDistance, scrollEnabled, throttle;
+        var checkWhenEnabled, handler, scrollDistance, scrollEnabled, windowElement;
+        windowElement = angular.element($window);
         scrollDistance = 0;
         if (attrs.infiniteScrollDistance != null) {
           scope.$watch(attrs.infiniteScrollDistance, function(value) {
@@ -25,25 +26,6 @@ mod.directive('infiniteScroll', [
             }
           });
         }
-        throttle = function(fn, delay) {
-          var timer;
-          if (delay === 0) {
-            return fn;
-          }
-          timer = false;
-          return function() {
-            if (timer) {
-              return;
-            }
-            timer = true;
-            if (delay !== -1) {
-              $timeout((function() {
-                return timer = false;
-              }), delay);
-            }
-            return fn.apply(null, arguments);
-          };
-        };
         handler = function() {
           var element, elementBottom, remaining, shouldScroll, windowBottom;
           element = elem[0];
@@ -61,9 +43,9 @@ mod.directive('infiniteScroll', [
             return checkWhenEnabled = true;
           }
         };
-        $window.onscroll = throttle(handler, 100);
+        windowElement.bind('scroll', handler);
         scope.$on('$destroy', function() {
-          return $window.onscroll = null;
+          return windowElement.unbind('scroll', handler);
         });
         return $timeout((function() {
           if (attrs.infiniteScrollImmediateCheck) {
